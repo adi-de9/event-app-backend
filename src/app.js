@@ -10,7 +10,7 @@ const app = express();
 // middlwares
 app.use(
   cors({
-    origin: CORS_ORIGIN,
+    origin: '*',
     credentials: true,
   })
 );
