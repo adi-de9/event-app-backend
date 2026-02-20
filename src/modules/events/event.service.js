@@ -8,7 +8,6 @@ export const createEvent = async ({
   location,
   total_booths,
 }) => {
-  // Start transaction
   const client = await import('../../config/db.js').then((m) =>
     m.default.connect()
   );
@@ -16,20 +15,14 @@ export const createEvent = async ({
   try {
     await client.query('BEGIN');
 
-    // 1. Create Event
     const eventResult = await client.query(
       'INSERT INTO events (name, description, date, location, total_booths) VALUES ($1, $2, $3, $4, $5) RETURNING *',
       [name, description, date, location, total_booths]
     );
     const event = eventResult.rows[0];
 
-    // 2. Auto-generate booths
-    const boothValues = [];
+    // Auto-generate booths
     for (let i = 1; i <= total_booths; i++) {
-      // ($1, $2, $3)
-      // Flattening not ideal for huge numbers, but ok for typical event sizes
-      // Using a loop to insert might be slower but safer for simple implementation
-      // Or construct a bulk insert query
       await client.query(
         'INSERT INTO booths (event_id, booth_number) VALUES ($1, $2)',
         [event.id, i]
@@ -46,9 +39,43 @@ export const createEvent = async ({
   }
 };
 
-export const getAllEvents = async () => {
-  const { rows } = await query('SELECT * FROM events ORDER BY date ASC');
-  return rows;
+/**
+ * Get all events, optionally filtered by status and with pagination.
+ * status = 'upcoming' → date > TODAY
+ * status = 'live'     → DATE(date) = CURRENT_DATE  (event is happening today)
+ * status = 'past'     → date < NOW()
+ * page / limit        → for pagination (defaults: page=1, limit=10)
+ */
+export const getAllEvents = async (status, page = 1, limit = 10) => {
+  const offset = (parseInt(page, 10) - 1) * parseInt(limit, 10);
+  let whereClause = '';
+
+  if (status === 'upcoming') {
+    whereClause = 'WHERE DATE(date) > CURRENT_DATE';
+  } else if (status === 'live') {
+    whereClause = 'WHERE DATE(date) = CURRENT_DATE';
+  } else if (status === 'past') {
+    whereClause = 'WHERE date < NOW()';
+  }
+
+  // Total count for pagination metadata
+  const countResult = await query(`SELECT COUNT(*) FROM events ${whereClause}`);
+  const total = parseInt(countResult.rows[0].count, 10);
+
+  const { rows } = await query(
+    `SELECT * FROM events ${whereClause} ORDER BY date ASC LIMIT $1 OFFSET $2`,
+    [parseInt(limit, 10), offset]
+  );
+
+  return {
+    data: rows,
+    pagination: {
+      total,
+      page: parseInt(page, 10),
+      limit: parseInt(limit, 10),
+      totalPages: Math.ceil(total / parseInt(limit, 10)),
+    },
+  };
 };
 
 export const getEventById = async (id) => {
@@ -56,18 +83,26 @@ export const getEventById = async (id) => {
   const event = rows[0];
   if (!event) throw new AppError(404, 'Event not found');
 
-  // Get booths for this event
+  // Get booths + available count
   const boothResult = await query(
-    'SELECT * FROM booths WHERE event_id = $1 ORDER BY booth_number ASC',
+    `SELECT b.*,
+       CASE WHEN br.status = 'approved' THEN true ELSE false END AS is_occupied
+     FROM booths b
+     LEFT JOIN booth_requests br ON b.id = br.booth_id AND br.status = 'approved'
+     WHERE b.event_id = $1
+     ORDER BY b.booth_number ASC`,
     [id]
   );
   event.booths = boothResult.rows;
+  event.total_booths = boothResult.rows.length;
+  event.available_booths = boothResult.rows.filter(
+    (b) => !b.is_occupied
+  ).length;
 
   return event;
 };
 
 export const updateEvent = async (id, data) => {
-  // Dynamic update query construction
   const keys = Object.keys(data);
   if (keys.length === 0) return getEventById(id);
 

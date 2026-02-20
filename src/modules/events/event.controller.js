@@ -10,10 +10,11 @@ export const createEvent = asyncHandler(async (req, res) => {
 });
 
 export const getAllEvents = asyncHandler(async (req, res) => {
-  const events = await eventService.getAllEvents();
+  const { status, page = 1, limit = 10 } = req.query;
+  const result = await eventService.getAllEvents(status, page, limit);
   return res
     .status(200)
-    .json(new ApiResponse(200, events, 'Events reached successfully'));
+    .json(new ApiResponse(200, result, 'Events fetched successfully'));
 });
 
 export const getEventById = asyncHandler(async (req, res) => {

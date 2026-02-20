@@ -14,6 +14,24 @@ router.post(
   boothRequestController.createBoothRequest
 );
 
+router.get(
+  '/my',
+  allowRoles('exhibitor'),
+  boothRequestController.getMyBoothRequests
+);
+
+router.get(
+  '/my-requests',
+  allowRoles('exhibitor'),
+  boothRequestController.getMyBoothRequests
+);
+
+router.get(
+  '/my-booths',
+  allowRoles('exhibitor'),
+  boothRequestController.getMyAssignedBooths
+);
+
 // Admin: View all and manage
 router.get(
   '/',
