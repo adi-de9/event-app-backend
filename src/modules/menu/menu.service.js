@@ -22,7 +22,15 @@ const verifyMenuOwnership = async (userId, itemId) => {
 
 export const createMenuItem = async (
   userId,
-  { booth_id, name, description, price, image_url, availability = true }
+  {
+    booth_id,
+    name,
+    description,
+    price,
+    image_url,
+    category = 'Mains',
+    availability = true,
+  }
 ) => {
   if (!booth_id) throw new AppError(400, 'booth_id is required');
   if (!name) throw new AppError(400, 'name is required');
@@ -39,9 +47,9 @@ export const createMenuItem = async (
     throw new AppError(403, 'You do not own this booth');
 
   const { rows } = await query(
-    `INSERT INTO menu_items (booth_id, name, description, price, image_url, availability)
-     VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-    [booth_id, name, description, price, image_url, availability]
+    `INSERT INTO menu_items (booth_id, name, description, price, image_url, category, availability)
+     VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+    [booth_id, name, description, price, image_url, category, availability]
   );
   return rows[0];
 };
@@ -86,7 +94,14 @@ export const getMyMenu = async (userId) => {
 export const updateMenuItem = async (userId, itemId, data) => {
   await verifyMenuOwnership(userId, itemId);
 
-  const allowed = ['name', 'description', 'price', 'image_url', 'availability'];
+  const allowed = [
+    'name',
+    'description',
+    'price',
+    'image_url',
+    'category',
+    'availability',
+  ];
   const keys = Object.keys(data).filter((k) => allowed.includes(k));
   if (keys.length === 0) throw new AppError(400, 'No valid fields to update');
 

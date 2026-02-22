@@ -36,7 +36,7 @@ app.use('/api/booth-requests', boothRequestRouter);
 app.use('/api/menu', menuRouter);
 app.use('/api/orders', orderRouter);
 // Alias for reports accessed via /api/reports/exhibitor-sales?boothId=
-app.use('/api/reports', orderRouter);
+// app.use('/api/reports', orderRouter);
 
 // Health check
 app.get('/api/healthCheck', async (_, res) => {

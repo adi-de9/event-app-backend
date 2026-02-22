@@ -7,38 +7,34 @@ const router = Router();
 
 router.use(verifyJWT);
 
-// ─── Static paths first (before /:id to avoid collisions) ─────────────────────
-
-// ── Visitor ──────────────────────────────────────────────────────────────────
-// POST /api/orders         → Place a new order
+// POST /api/orders
 router.post('/', allowRoles('visitor'), orderController.createOrder);
 
 // GET /api/orders/visitor/my?status=new&page=1&limit=10
-//   → Paginated order history for logged-in visitor, optional status filter
 router.get(
   '/visitor/my',
   allowRoles('visitor'),
   orderController.getMyOrdersForVisitor
 );
 
-// ── Exhibitor ─────────────────────────────────────────────────────────────────
-// GET /api/orders/my           → Exhibitor's own booth orders (simple list)
-// GET /api/orders/my-orders    → alias
+// ── Exhibitor
+// GET /api/orders/my
+// GET /api/orders/my-orders
 router.get('/my', allowRoles('exhibitor'), orderController.getMyOrders);
 router.get('/my-orders', allowRoles('exhibitor'), orderController.getMyOrders);
 
-// GET /api/orders/my-stats     → Dashboard totals
+// GET /api/orders/my-stats
 router.get('/my-stats', allowRoles('exhibitor'), orderController.getMyStats);
 router.get('/my-sales', allowRoles('exhibitor'), orderController.getMyStats);
 
-// GET /api/orders/booth/:boothId → All orders for exhibitor's booth
+// GET /api/orders/booth/:boothId
 router.get(
   '/booth/:boothId',
   allowRoles('exhibitor', 'admin'),
   orderController.getOrdersByBooth
 );
 
-// PATCH /api/orders/:id/status  → Advance order status (strict transition chain)
+// PATCH /api/orders/:id/status
 router.patch(
   '/:id/status',
   allowRoles('exhibitor', 'admin'),
@@ -47,22 +43,37 @@ router.patch(
 
 // GET /api/orders/reports/exhibitor-sales?boothId=
 router.get(
-  '/reports/exhibitor-sales',
+  '/exhibitor-sales',
   allowRoles('exhibitor'),
   orderController.getExhibitorSalesReport
 );
 
 // ── Admin ─────────────────────────────────────────────────────────────────────
 router.get('/', allowRoles('admin'), orderController.getAllOrders);
+router.get('/sales', allowRoles('admin'), orderController.getSalesReport);
+
+// Admin Specific Reports
 router.get(
-  '/reports/sales',
+  '/event-sales/:eventId',
   allowRoles('admin'),
-  orderController.getSalesReport
+  orderController.getEventSalesReport
+);
+router.get(
+  '/booth-sales/:eventId',
+  allowRoles('admin'),
+  orderController.getBoothSalesByEventReport
+);
+router.get(
+  '/dashboard',
+  allowRoles('admin'),
+  orderController.getAdminDashboardStats
+);
+router.get(
+  '/reports/dashboard',
+  allowRoles('admin'),
+  orderController.getAdminDashboardStats
 );
 
-// ── Shared: single order details ─────────────────────────────────────────────
-// Visitor: can only view their own orders (service-layer check)
-// Exhibitor: can only view orders for their booth (service-layer check)
 router.get(
   '/:id',
   allowRoles('visitor', 'exhibitor', 'admin'),

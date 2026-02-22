@@ -31,6 +31,13 @@ export const updateEvent = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, event, 'Event updated successfully'));
 });
 
+export const closeEvent = asyncHandler(async (req, res) => {
+  const event = await eventService.closeEvent(req.params.id);
+  return res
+    .status(200)
+    .json(new ApiResponse(200, event, 'Event closed successfully'));
+});
+
 export const deleteEvent = asyncHandler(async (req, res) => {
   await eventService.deleteEvent(req.params.id);
   return res

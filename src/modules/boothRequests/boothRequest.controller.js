@@ -29,7 +29,11 @@ export const getAllBoothRequests = asyncHandler(async (req, res) => {
 });
 
 export const approveBoothRequest = asyncHandler(async (req, res) => {
-  const result = await boothRequestService.approveBoothRequest(req.params.id);
+  const booth_id = req.body.booth_id || req.body.boothId;
+  const result = await boothRequestService.approveBoothRequest(
+    req.params.id,
+    booth_id
+  );
   return res
     .status(200)
     .json(

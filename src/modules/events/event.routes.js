@@ -15,6 +15,7 @@ router.use(allowRoles('admin'));
 
 router.post('/', eventController.createEvent);
 router.patch('/:id', eventController.updateEvent);
+router.patch('/:id/close', eventController.closeEvent);
 router.delete('/:id', eventController.deleteEvent);
 
 export default router;

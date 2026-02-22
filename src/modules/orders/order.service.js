@@ -17,6 +17,21 @@ export const createOrder = async (visitorId, { event_id, booth_id, items }) => {
   try {
     await client.query('BEGIN');
 
+    // Check event status
+    const eventResult = await client.query(
+      'SELECT status FROM events WHERE id = $1',
+      [event_id]
+    );
+    if (eventResult.rows.length === 0) {
+      throw new AppError(404, 'Event not found');
+    }
+    if (eventResult.rows[0].status === 'closed') {
+      throw new AppError(
+        400,
+        'This event is closed. New orders are not allowed.'
+      );
+    }
+
     let totalAmount = 0;
     const orderItemsData = [];
 
@@ -154,16 +169,37 @@ export const getOrdersByBooth = async (boothId, userId) => {
   return rows;
 };
 
-export const getAllOrders = async () => {
-  const { rows } = await query(`
+/**
+ * Admin: Get all orders across the platform with filters.
+ */
+export const getAllOrders = async ({ eventId, boothId, status }) => {
+  let queryStr = `
     SELECT o.*, u.name as visitor_name, e.name as event_name,
            b.booth_number
     FROM orders o
     LEFT JOIN users  u ON o.visitor_id = u.id
     LEFT JOIN events e ON o.event_id   = e.id
     LEFT JOIN booths b ON o.booth_id   = b.id
-    ORDER BY o.created_at DESC
-  `);
+    WHERE 1=1
+  `;
+  const params = [];
+
+  if (eventId) {
+    params.push(eventId);
+    queryStr += ` AND o.event_id = $${params.length}`;
+  }
+  if (boothId) {
+    params.push(boothId);
+    queryStr += ` AND o.booth_id = $${params.length}`;
+  }
+  if (status) {
+    params.push(status);
+    queryStr += ` AND o.status = $${params.length}`;
+  }
+
+  queryStr += ' ORDER BY o.created_at DESC';
+
+  const { rows } = await query(queryStr, params);
   return rows;
 };
 
@@ -207,6 +243,64 @@ export const updateOrderStatus = async (userId, orderId, newStatus) => {
     [newStatus, orderId]
   );
   return rows[0];
+};
+
+/**
+ * Admin: Sales report for a specific event.
+ */
+export const getEventSalesReport = async (eventId) => {
+  const { rows } = await query(
+    `SELECT 
+       e.name              AS event_name,
+       COUNT(o.id)         AS total_orders,
+       SUM(o.total_amount) AS total_revenue
+     FROM events e
+     LEFT JOIN orders o ON e.id = o.event_id
+     WHERE e.id = $1
+     GROUP BY e.name`,
+    [eventId]
+  );
+  if (rows.length === 0) throw new AppError(404, 'Event not found');
+  return rows[0];
+};
+
+/**
+ * Admin: Booth sales report for a specific event.
+ */
+export const getBoothSalesByEventReport = async (eventId) => {
+  const { rows } = await query(
+    `SELECT 
+       b.booth_number,
+       u.name              AS exhibitor_name,
+       COUNT(o.id)         AS total_orders,
+       SUM(o.total_amount) AS total_revenue
+     FROM booths b
+     LEFT JOIN users u ON b.exhibitor_id = u.id
+     LEFT JOIN orders o ON b.id = o.booth_id
+     WHERE b.event_id = $1
+     GROUP BY b.id, u.name
+     ORDER BY total_revenue DESC NULLS LAST`,
+    [eventId]
+  );
+  return rows;
+};
+
+/**
+ * Admin: Global dashboard stats.
+ */
+export const getAdminDashboardStats = async () => {
+  const [events, users, orders] = await Promise.all([
+    query('SELECT COUNT(*) FROM events'),
+    query("SELECT COUNT(*) FROM users WHERE role = 'exhibitor'"),
+    query('SELECT COUNT(*), SUM(total_amount) FROM orders'),
+  ]);
+
+  return {
+    totalEvents: parseInt(events.rows[0].count, 10),
+    totalExhibitors: parseInt(users.rows[0].count, 10),
+    totalOrders: parseInt(orders.rows[0].count, 10),
+    totalRevenue: parseFloat(orders.rows[0].sum || 0),
+  };
 };
 
 export const getSalesReport = async () => {

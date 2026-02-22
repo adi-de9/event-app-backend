@@ -49,10 +49,44 @@ export const getOrdersByBooth = asyncHandler(async (req, res) => {
 });
 
 export const getAllOrders = asyncHandler(async (req, res) => {
-  const orders = await orderService.getAllOrders();
+  const { eventId, boothId, status } = req.query;
+  const orders = await orderService.getAllOrders({ eventId, boothId, status });
   return res
     .status(200)
     .json(new ApiResponse(200, orders, 'All orders fetched successfully'));
+});
+
+export const getEventSalesReport = asyncHandler(async (req, res) => {
+  const report = await orderService.getEventSalesReport(req.params.eventId);
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(200, report, 'Event sales report fetched successfully')
+    );
+});
+
+export const getBoothSalesByEventReport = asyncHandler(async (req, res) => {
+  const report = await orderService.getBoothSalesByEventReport(
+    req.params.eventId
+  );
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        report,
+        'Booth sales by event report fetched successfully'
+      )
+    );
+});
+
+export const getAdminDashboardStats = asyncHandler(async (req, res) => {
+  const stats = await orderService.getAdminDashboardStats();
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(200, stats, 'Admin dashboard stats fetched successfully')
+    );
 });
 
 export const updateOrderStatus = asyncHandler(async (req, res) => {

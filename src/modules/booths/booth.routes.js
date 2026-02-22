@@ -13,6 +13,14 @@ const router = Router();
  */
 router.get('/event/:eventId', boothController.getBoothsByEvent);
 
+// Admin: Monitor all booths for an event (including available)
+router.get(
+  '/admin/event/:eventId',
+  verifyJWT,
+  allowRoles('admin'),
+  boothController.getBoothsForAdminByEvent
+);
+
 // ─── Authenticated ────────────────────────────────────────────────────────────
 router.use(verifyJWT);
 

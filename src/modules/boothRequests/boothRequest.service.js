@@ -10,8 +10,15 @@ export const createBoothRequest = async ({ event_id, exhibitor_id }) => {
   const eventResult = await query('SELECT * FROM events WHERE id = $1', [
     event_id,
   ]);
-  if (eventResult.rows.length === 0) {
+  const event = eventResult.rows[0];
+  if (!event) {
     throw new AppError(404, 'Event not found');
+  }
+  if (event.status === 'closed') {
+    throw new AppError(
+      400,
+      'This event is closed. New booth requests are not allowed.'
+    );
   }
 
   // 2. Check there is at least one available booth
@@ -64,7 +71,7 @@ export const getAllBoothRequests = async () => {
   return rows;
 };
 
-export const approveBoothRequest = async (id) => {
+export const approveBoothRequest = async (id, booth_id) => {
   const client = await import('../../config/db.js').then((m) =>
     m.default.connect()
   );
@@ -80,13 +87,28 @@ export const approveBoothRequest = async (id) => {
     if (request.status !== 'pending')
       throw new AppError(400, 'Request is not pending');
 
-    // Find first available booth for this event
-    const boothResult = await client.query(
-      "SELECT * FROM booths WHERE event_id = $1 AND status = 'available' ORDER BY booth_number ASC LIMIT 1",
-      [request.event_id]
-    );
-    const booth = boothResult.rows[0];
-    if (!booth) throw new AppError(400, 'No available booths for this event');
+    let booth;
+    if (booth_id) {
+      // Validate specific booth
+      const selectedBoothResult = await client.query(
+        "SELECT * FROM booths WHERE id = $1 AND event_id = $2 AND status = 'available'",
+        [booth_id, request.event_id]
+      );
+      booth = selectedBoothResult.rows[0];
+      if (!booth)
+        throw new AppError(
+          400,
+          'Selected booth is not available for this event'
+        );
+    } else {
+      // Find first available booth for this event
+      const boothResult = await client.query(
+        "SELECT * FROM booths WHERE event_id = $1 AND status = 'available' ORDER BY booth_number ASC LIMIT 1",
+        [request.event_id]
+      );
+      booth = boothResult.rows[0];
+      if (!booth) throw new AppError(400, 'No available booths for this event');
+    }
 
     // Assign the booth to the exhibitor
     await client.query(
@@ -94,7 +116,7 @@ export const approveBoothRequest = async (id) => {
       [request.exhibitor_id, booth.id]
     );
 
-    // Mark the request as approved (no booth_id column — assignment tracked on booths table)
+    // Mark the request as approved
     const updateResult = await client.query(
       "UPDATE booth_requests SET status = 'approved' WHERE id = $1 RETURNING *",
       [id]

@@ -64,11 +64,32 @@ export const getBoothsByEvent = async (eventId) => {
 };
 
 /**
+ * Admin: Get ALL booths for an event (available + assigned).
+ * Includes exhibitor info if present.
+ */
+export const getBoothsForAdminByEvent = async (eventId) => {
+  const { rows } = await query(
+    `SELECT 
+       b.*,
+       u.name  AS exhibitor_name,
+       u.email AS exhibitor_email,
+       e.name  AS event_name
+     FROM booths b
+     JOIN events e ON b.event_id = e.id
+     LEFT JOIN users u ON b.exhibitor_id = u.id
+     WHERE b.event_id = $1
+     ORDER BY b.booth_number ASC`,
+    [eventId]
+  );
+  return rows;
+};
+
+/**
  * Get booth details by id (used by admin / public menu view).
  */
 export const getBoothById = async (id) => {
   const { rows } = await query(
-    `SELECT b.*, e.name AS event_name, u.name AS exhibitor_name
+    `SELECT b.*, e.name AS event_name, u.name AS exhibitor_name, u.email AS exhibitor_email
      FROM booths b
      JOIN events e ON b.event_id = e.id
      LEFT JOIN users u ON b.exhibitor_id = u.id

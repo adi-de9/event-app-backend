@@ -35,3 +35,12 @@ export const getBoothById = asyncHandler(async (req, res) => {
     .status(200)
     .json(new ApiResponse(200, booth, 'Booth details fetched successfully'));
 });
+
+export const getBoothsForAdminByEvent = asyncHandler(async (req, res) => {
+  const booths = await boothService.getBoothsForAdminByEvent(
+    req.params.eventId
+  );
+  return res
+    .status(200)
+    .json(new ApiResponse(200, booths, 'Admin booths fetched successfully'));
+});
