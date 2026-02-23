@@ -49,6 +49,7 @@ CREATE TABLE IF NOT EXISTS menu_items (
     name VARCHAR(255) NOT NULL,
     description TEXT,
     price DECIMAL(10, 2) NOT NULL,
+    category VARCHAR(100) DEFAULT 'Mains',
     image_url TEXT,
     availability BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()

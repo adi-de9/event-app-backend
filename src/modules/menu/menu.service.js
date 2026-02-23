@@ -66,7 +66,7 @@ export const getMenuByBoothId = async (boothId) => {
   if (!boothCheck.rows[0]) throw new AppError(404, 'Booth not found');
 
   const { rows } = await query(
-    `SELECT id, name, description, price, image_url, availability
+    `SELECT id, name, description, price, category, image_url, availability
      FROM menu_items
      WHERE booth_id = $1 AND availability = true
      ORDER BY name ASC`,

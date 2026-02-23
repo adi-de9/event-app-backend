@@ -2,11 +2,11 @@ import { Router } from 'express';
 import * as menuController from './menu.controller.js';
 import { verifyJWT } from '../../middleware/auth.middleware.js';
 import { allowRoles } from '../../middleware/role.middleware.js';
+import { upload } from '../../middleware/multer.middleware.js';
 
 const router = Router();
 
-// ─── Public ──────────────────────────────────────────────────────────────────
-// NOTE: Static paths MUST come before parameterized paths to avoid shadowing.
+// ─── Public
 // GET /api/menu/booth/:boothId  → public menu view
 router.get('/booth/:boothId', menuController.getMenuByBoothId);
 
@@ -18,13 +18,13 @@ router.use(allowRoles('exhibitor'));
 router.get('/my', menuController.getMyMenu);
 
 // POST /api/menu → add new menu item
-router.post('/', menuController.createMenuItem);
+router.post('/', upload.single('image'), menuController.createMenuItem);
 
 // PATCH /api/menu/:id/availability → toggle availability
 router.patch('/:id/availability', menuController.updateAvailability);
 
 // PATCH /api/menu/:id → update any fields
-router.patch('/:id', menuController.updateMenuItem);
+router.patch('/:id', upload.single('image'), menuController.updateMenuItem);
 
 // DELETE /api/menu/:id → delete item
 router.delete('/:id', menuController.deleteMenuItem);

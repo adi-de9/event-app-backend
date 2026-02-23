@@ -1,9 +1,25 @@
 import { asyncHandler } from '../../utils/asyncHandler.js';
 import { ApiResponse } from '../../utils/apiResponse.js';
 import * as menuService from './menu.service.js';
+import { uploadOnCloudinary } from '../../utils/cloudinary.js';
+import { AppError } from '../../utils/appError.js';
 
 export const createMenuItem = asyncHandler(async (req, res) => {
-  const item = await menuService.createMenuItem(req.user.id, req.body);
+  const imageLocalPath = req.file?.path;
+
+  let image_url = req.body.image_url;
+  if (imageLocalPath) {
+    const cloudinaryResponse = await uploadOnCloudinary(imageLocalPath);
+    if (cloudinaryResponse) {
+      image_url = cloudinaryResponse.secure_url;
+    }
+  }
+
+  const item = await menuService.createMenuItem(req.user.id, {
+    ...req.body,
+    image_url,
+  });
+
   return res
     .status(201)
     .json(new ApiResponse(201, item, 'Menu item created successfully'));
@@ -24,10 +40,21 @@ export const getMyMenu = asyncHandler(async (req, res) => {
 });
 
 export const updateMenuItem = asyncHandler(async (req, res) => {
+  const imageLocalPath = req.file?.path;
+
+  let updateData = { ...req.body };
+
+  if (imageLocalPath) {
+    const cloudinaryResponse = await uploadOnCloudinary(imageLocalPath);
+    if (cloudinaryResponse) {
+      updateData.image_url = cloudinaryResponse.secure_url;
+    }
+  }
+
   const item = await menuService.updateMenuItem(
     req.user.id,
     req.params.id,
-    req.body
+    updateData
   );
   return res
     .status(200)
