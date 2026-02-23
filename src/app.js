@@ -4,8 +4,16 @@ import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import { logDetails } from './middleware/logdetails.js';
 import { errorHandler } from './middleware/error.middleware.js';
+import fs from 'fs';
+import path from 'path';
 
 const app = express();
+
+// Ensure public/temp exists for multer
+const tempDir = './public/temp';
+if (!fs.existsSync(tempDir)) {
+  fs.mkdirSync(tempDir, { recursive: true });
+}
 
 // middlwares
 app.use(

@@ -1,2 +1,6 @@
 node_modules
 .env
+
+# Ignore temp files but keep the directory
+public/temp/*
+!public/temp/.gitkeep
