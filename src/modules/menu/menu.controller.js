@@ -8,16 +8,22 @@ export const createMenuItem = asyncHandler(async (req, res) => {
   const imageLocalPath = req.file?.path;
 
   let image_url = req.body.image_url;
+  if (image_url === 'null' || image_url === '') image_url = null;
+
   if (imageLocalPath) {
+    console.log('Uploading image to Cloudinary:', imageLocalPath);
     const cloudinaryResponse = await uploadOnCloudinary(imageLocalPath);
     if (cloudinaryResponse) {
+      console.log('Cloudinary Upload Success:', cloudinaryResponse.secure_url);
       image_url = cloudinaryResponse.secure_url;
+    } else {
+      console.error('Cloudinary Upload Failed');
     }
   }
 
   const item = await menuService.createMenuItem(req.user.id, {
     ...req.body,
-    image_url,
+    image_url: image_url || null,
   });
 
   return res
@@ -43,6 +49,10 @@ export const updateMenuItem = asyncHandler(async (req, res) => {
   const imageLocalPath = req.file?.path;
 
   let updateData = { ...req.body };
+
+  if (updateData.image_url === 'null' || updateData.image_url === '') {
+    updateData.image_url = null;
+  }
 
   if (imageLocalPath) {
     const cloudinaryResponse = await uploadOnCloudinary(imageLocalPath);
